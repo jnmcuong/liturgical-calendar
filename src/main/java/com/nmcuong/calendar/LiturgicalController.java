@@ -11,49 +11,109 @@ import com.nmcuong.model.LiturgicalCalendar;
 @Path("/liturgical")
 public class LiturgicalController {
 
-	private LocalDate gregorialDate;
+	private LocalDate toDate;
+	
+	private LocalDate christmast;
+	
+	private LocalDate epiphany;
+	
+	private LocalDate beginAdvent;
+	
+	private LocalDate easterDate;
+	
+	private LocalDate beginLent;
+	
+	private int season;
 	
 	@GET
 	public Response fromGregorianDate(@QueryParam("date") String date) {
 		try {
-			gregorialDate = LocalDate.parse(date);
+			toDate = LocalDate.parse(date);
 		} catch (Exception e) {
-			gregorialDate = LocalDate.now();
+			toDate = LocalDate.now();
 		}
 
 		LiturgicalCalendar liturgicalCalendar = new LiturgicalCalendar();
-		liturgicalCalendar.setWeekday(gregorialDate.getDayOfWeek().getValue());
-		liturgicalCalendar.setYear(gregorialDate.getYear() % 2);
-		liturgicalCalendar.setCycle(getCycle(gregorialDate.getYear()));
-
-		return Response.ok(date).build();
+		liturgicalCalendar.setWeekday(toDate.getDayOfWeek().getValue());
+		liturgicalCalendar.setYear(toDate.getYear() % 2);
+		liturgicalCalendar.setCycle(getCycle(toDate.getYear()));
+		season = getSeason(); 
+		liturgicalCalendar.setSeason(season);
+		liturgicalCalendar.setWeek(getWeek());
+		return Response.ok(liturgicalCalendar).build();
 	}
 
+	private int getWeek() {
+		int week = 0;
+		if (season == 1) {
+			week = getWeekFromTwoDate(beginAdvent, toDate);
+		}
+		
+		if (season == 2) {
+			week = getWeekFromTwoDate(christmast, toDate);
+		}
+		
+		if (season == 3) {
+			week = getWeekFromTwoDate(beginLent, toDate);
+		}
+		
+		if (season == 4) {
+			week = getWeekFromTwoDate(easterDate, toDate);
+		}
+		
+		if (season == 0) {
+			if (toDate.isBefore(beginLent)) {
+				week = getWeekFromTwoDate(epiphany, toDate);
+			} else {
+				week = getWeekFromTwoDate(easterDate.plusDays(50), toDate) + 6;
+			}
+		}
+		
+		return week;
+	}
+	
+	static private int getWeekFromTwoDate(LocalDate beginDate, LocalDate endDate) {
+		return (endDate.getDayOfYear() - beginDate.getDayOfYear()) / 7 + 1;
+	}
+	
+	private LocalDate getEpiphanyDate() {
+		LocalDate epiphany = christmast.plusWeeks(1);
+		epiphany = epiphany.plusDays(epiphany.getDayOfWeek().getValue() == 7 ? 7 : 7 - epiphany.getDayOfWeek().getValue());
+		return epiphany;
+	}
+	
 	private int getSeason() {
-		LocalDate christmast = LocalDate.of(gregorialDate.getYear(), 12, 25);
-		LocalDate epiphany = LocalDate.of(gregorialDate.getYear(), 1, 6);
+		christmast = LocalDate.of(toDate.getYear(), 12, 25);
+		epiphany = getEpiphanyDate();
 		
-		LocalDate beginAdvent = getFirstDayOfAdvent();
+		beginAdvent = getFirstDayOfAdvent();
 		
-		if ((gregorialDate.isAfter(beginAdvent) || gregorialDate.isEqual(beginAdvent)) && gregorialDate.isBefore(christmast)) {
+		
+		
+		if ((toDate.isAfter(beginAdvent) || toDate.isEqual(beginAdvent)) && toDate.isBefore(christmast)) {
 			return 1;
 		}
 		
-		if ((gregorialDate.isAfter(christmast) || gregorialDate.isEqual(christmast)) && (gregorialDate.isBefore(epiphany)
-				|| gregorialDate.isEqual(epiphany))) {
+		if ((toDate.isAfter(christmast) || toDate.isEqual(christmast)) && (toDate.isBefore(epiphany)
+				|| toDate.isEqual(epiphany))) {
 			return 2;
 		}
 		
-		LocalDate beginLent = getEasterDate(gregorialDate.getYear()).minusDays(43);
-		if ((gregorialDate.isAfter(beginLent) || gregorialDate.equals(beginLent)) && (gregorialDate.isBefore(beginLent.plusDays(41)))) {
+		easterDate = getEasterDate(toDate.getYear());
+		beginLent = easterDate.minusDays(43);
+		if ((toDate.isAfter(beginLent) || toDate.equals(beginLent)) && (toDate.isBefore(beginLent.plusDays(41)))) {
 			return 3;
+		}
+		
+		if ((toDate.isAfter(easterDate) || toDate.equals(easterDate)) && toDate.isBefore(easterDate.minusDays(51))) {
+			return 4;
 		}
 		
 		return 0;
 	}
 
 	private LocalDate getFirstDayOfAdvent() {
-		LocalDate advent = gregorialDate.minusDays(21);
+		LocalDate advent = toDate.minusDays(21);
 		int dayofweek = advent.getDayOfWeek().getValue();
 		advent = advent.minusDays(dayofweek);
 		return advent;
