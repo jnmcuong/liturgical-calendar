@@ -1,11 +1,12 @@
 package com.nmcuong.calendar;
 
 import java.time.LocalDate;
+
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Response;
-
+import javax.ws.rs.core.MediaType;
 import com.nmcuong.model.LiturgicalCalendar;
 
 @Path("/liturgical")
@@ -24,9 +25,11 @@ public class LiturgicalController {
 	private LocalDate beginLent;
 	
 	private int season;
+	private int weekday;
 	
 	@GET
-	public Response fromGregorianDate(@QueryParam("date") String date) {
+	@Consumes(MediaType.APPLICATION_JSON)
+	public LiturgicalCalendar fromGregorianDate(@QueryParam("date") String date) {
 		try {
 			toDate = LocalDate.parse(date);
 		} catch (Exception e) {
@@ -35,12 +38,13 @@ public class LiturgicalController {
 
 		LiturgicalCalendar liturgicalCalendar = new LiturgicalCalendar();
 		liturgicalCalendar.setWeekday(toDate.getDayOfWeek().getValue());
+		weekday = liturgicalCalendar.getWeekday();
 		liturgicalCalendar.setYear(toDate.getYear() % 2);
 		liturgicalCalendar.setCycle(getCycle(toDate.getYear()));
 		season = getSeason(); 
 		liturgicalCalendar.setSeason(season);
 		liturgicalCalendar.setWeek(getWeek());
-		return Response.ok(liturgicalCalendar).build();
+		return liturgicalCalendar;
 	}
 
 	private int getWeek() {
@@ -65,10 +69,9 @@ public class LiturgicalController {
 			if (toDate.isBefore(beginLent)) {
 				week = getWeekFromTwoDate(epiphany, toDate);
 			} else {
-				week = getWeekFromTwoDate(easterDate.plusDays(50), toDate) + 6;
+				week = getWeekFromTwoDate(easterDate.plusDays(49), toDate) + 6;
 			}
 		}
-		
 		return week;
 	}
 	
@@ -105,7 +108,7 @@ public class LiturgicalController {
 			return 3;
 		}
 		
-		if ((toDate.isAfter(easterDate) || toDate.equals(easterDate)) && toDate.isBefore(easterDate.minusDays(51))) {
+		if ((toDate.isAfter(easterDate) || toDate.equals(easterDate)) && toDate.isBefore(easterDate.plusDays(49))) {
 			return 4;
 		}
 		
@@ -113,7 +116,7 @@ public class LiturgicalController {
 	}
 
 	private LocalDate getFirstDayOfAdvent() {
-		LocalDate advent = toDate.minusDays(21);
+		LocalDate advent = christmast.minusDays(21);
 		int dayofweek = advent.getDayOfWeek().getValue();
 		advent = advent.minusDays(dayofweek);
 		return advent;
@@ -134,7 +137,7 @@ public class LiturgicalController {
 		int m = (a + 11 * h + 22 * l) / 451;
 		int n = (h + l - 7 * m + 114) / 31;
 		int p = (h + l - 7 * m + 114) % 31;
-		LocalDate easterDate = LocalDate.of(year, n - 1, p + 1);
+		LocalDate easterDate = LocalDate.of(year, n, p + 1);
 		return easterDate;
 	}
 
