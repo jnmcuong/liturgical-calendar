@@ -67,7 +67,9 @@ public class LiturgicalController {
 		
 		if (season == 0) {
 			if (toDate.isBefore(beginLent)) {
-				week = getWeekFromTwoDate(epiphany, toDate);
+				LocalDate originalEpiphany = LocalDate.of(toDate.getYear(), 1, 6);
+				LocalDate beginFirstOrdinary = getNexSunDay(originalEpiphany);
+				week = getWeekFromTwoDate(beginFirstOrdinary, toDate);
 			} else {
 				week = getWeekFromTwoDate(easterDate.plusDays(49), toDate) + 6;
 			}
@@ -81,8 +83,13 @@ public class LiturgicalController {
 	
 	private LocalDate getEpiphanyDate() {
 		LocalDate epiphany = christmast.plusWeeks(1);
-		epiphany = epiphany.plusDays(epiphany.getDayOfWeek().getValue() == 7 ? 7 : 7 - epiphany.getDayOfWeek().getValue());
-		return epiphany;
+		return getNexSunDay(epiphany);
+	}
+	
+	private LocalDate getNexSunDay(LocalDate input) {
+		LocalDate output = LocalDate.of(input.getYear(), input.getMonth(), input.getDayOfMonth());
+		output = output.plusDays(output.getDayOfWeek().getValue() == 7 ? 7 : 7 - output.getDayOfWeek().getValue());
+		return output;
 	}
 	
 	private int getSeason() {
